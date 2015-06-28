@@ -3,4 +3,4 @@ I found myself debating what labelling system to use on a cabinet of resistors I
 I couldn't find anything out there that I could pinch, so I knocked this up quickly.
 
 Example:
-![](https://github.com/MrBunsy/Resistor-Colour-Codes-Image-Generator/blob/master/example.png)
+![1k0](https://github.com/MrBunsy/Resistor-Colour-Codes-Image-Generator/blob/master/example.png)
