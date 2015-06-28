@@ -5,9 +5,25 @@
  */
 package resistorcolourcodes;
 
+import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.GradientPaint;
+import java.awt.Graphics2D;
+import java.awt.Paint;
+import java.awt.RenderingHints;
+import java.awt.Shape;
+import java.awt.Stroke;
+import java.awt.Transparency;
+import java.awt.geom.Line2D;
+import java.awt.geom.RoundRectangle2D;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.MathContext;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+import javax.imageio.ImageIO;
 
 /**
  *
@@ -41,15 +57,10 @@ public class ResistorColourCodes {
 
         b = b.round(new MathContext(2));
 
-//        System.out.println(b);
-//        System.out.println("scale = " + b.scale());
-//
-//        System.out.println("invalue = " + b.intValue());
         int rounded = b.intValue();
 
         String stringed = String.valueOf(rounded);
 
-//        System.out.println("stringed = " + stringed);
         int len = stringed.length();
         // this is pointless, we round to 2sigfigs so we can just count number of zeros.  all zeroes will be at the end.
         // having just said that, this is more flexible and it turns out java doesn't have a built in "count all isntances" option...
@@ -62,75 +73,120 @@ public class ResistorColourCodes {
                 break;
             }
         }
-//
-//        System.out.println("zerocount = " + zeroCount);
-//
-//        System.out.println("/3 = " + (zeroCount / 3));
 
         String postfix = powerOfTen(len - 1);
 
-//        //integer arthimetic.
-//        int threeCharCount = (len - 1) / 3;
-//        int threeZeroCount
-//        System.out.println("/3 = " + threeCharCount);
-//        int numMinusZeros = rounded / (int) Math.pow(10, threeZeroCount * 3);
-//
-//        String pretty = String.valueOf(numMinusZeros) + postfix;
         String pretty = "";
 
-//        pretty += stringed.charAt(0);
-        //how many zeros were lopped off with the postfix?
-//        int zerosDealtWith = zeroCount < 3 ? 0 : ((zeroCount % 3) + 1) * 3;
-         int zerosDealtWith = zeroCount < 3 ? 0 : (zeroCount / 3) * 3;
+        int zerosDealtWith = zeroCount < 3 ? 0 : (zeroCount / 3) * 3;
 
         int charsLeftToDealWith = len - zerosDealtWith;
 
-        if (charsLeftToDealWith < 4) {
+        if (charsLeftToDealWith == 1) {
+            pretty += stringed.charAt(0) + postfix + "0";
+        } else if (charsLeftToDealWith < 4) {
             pretty += stringed.substring(0, charsLeftToDealWith) + postfix;
         } else {
             pretty += stringed.charAt(0) + postfix + stringed.charAt(1);
         }
 
-//        switch (charsLeftToDealWith) {
-//            case 0:
-//                //oops?
-//                break;
-//            case 1:
-//                break;
-//            case 2:
-//                //firstdigit + decimalpoint + postfix
-//                if (stringed.charAt(1) != '0') {
-//                    pretty += "." + stringed.charAt(1);
-//                } else {
-//                    pretty += "0";
-//                }
-//                break;
-//            case 2:
-//                pretty += "00";
-//                break;
-//            case 3:
-//                pretty += "000";
-//                break;
-//        }
-//        for (int i = 0; i < len - threeCharCount * 3; i++) {
-//            if (i == 0) {
-//                if (stringed.charAt(1) != '0') {
-//                    //if the second digit isn't zero, we'll need to put a decimal place in
-//                    pretty += "." + stringed.charAt(1);
-//                    break;
-//                } else {
-//                    continue;
-//                }
-//            } else {
-//                pretty += "0";
-//            }
-//        }
-//        if (len > 1) {
-//
-//        }
-//        pretty += postfix;
-//        System.out.println("pretty = " + pretty);
+        Color[] colours = new Color[3];
+
+        colours[0] = valueToColour(Integer.parseInt(stringed.charAt(0) + ""));
+        if (len > 1) {
+            colours[1] = valueToColour(Integer.parseInt(stringed.charAt(1) + ""));
+        } else {
+            //edge case, I suppose
+            colours[1] = null;
+        }
+        //digits left, or zero if less than zero
+        colours[2] = valueToColour(Math.max(len - 2, 0));
+
         return new PrettyValue(value, pretty, new Color[]{});
+    }
+
+    public static BufferedImage getImageOfResistor(Color[] colours, int width, int height) {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+
+        Graphics2D graphics = image.createGraphics();
+
+        int resistorWidth = (int) Math.round(((double) width) * 0.8);
+        int resistorHeight = (int) Math.round(((double) height) * 0.8);
+
+        int strokeWidth = height / 20;
+        int cornerSize = height / 6;
+
+        graphics.setStroke(new BasicStroke(strokeWidth));
+
+        graphics.setPaint(Color.black);
+        graphics.draw(new Line2D.Double(0, height / 2, width, height / 2));
+        graphics.setPaint(new GradientPaint(0, 0, new Color(250, 150, 100), 0, height, new Color(200, 100, 50)));
+        Shape resistorBody = new RoundRectangle2D.Double((width - resistorWidth) / 2, (height - resistorHeight) / 2, resistorWidth, resistorHeight, cornerSize, cornerSize);
+        graphics.fill(resistorBody);
+
+        graphics.setPaint(Color.black);
+
+        graphics.draw(resistorBody);
+
+        return image;
+    }
+
+    public static boolean writeImageToFile(BufferedImage image, String filename, int scaleDown) {
+        try {
+            BufferedImage scaledImage = getScaledInstance(image, image.getWidth() / scaleDown, image.getHeight() / scaleDown, RenderingHints.VALUE_INTERPOLATION_BICUBIC, true);
+
+            ImageIO.write(scaledImage, "png", new File(filename));
+        } catch (IOException ex) {
+            Logger.getLogger(ResistorColourCodes.class.getName()).log(Level.SEVERE, null, ex);
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
+     * significant figures and multipliers for resistors
+     *
+     * @param fig
+     * @return
+     */
+    public static Color valueToColour(int fig) {
+        switch (fig) {
+            case 0:
+                return Color.BLACK;
+            case 1:
+                //brown
+//                return new Color(139, 69, 19);
+                return new Color(0x96, 0x4B, 0x00);
+            case 2:
+                return Color.RED;
+            case 3:
+                return Color.ORANGE;
+            case 4:
+                return Color.YELLOW;
+            case 5:
+                return Color.GREEN;
+            case 6:
+                return Color.BLUE;
+            case 7:
+                //violet
+//                return new Color(143,0,255);
+                return new Color(0xEE, 0x82, 0xEE);
+            case 8:
+                return Color.GRAY;
+            case 9:
+                return Color.WHITE;
+            case -1:
+                //gold
+                return new Color(0xcf, 0xb5, 0x3b);
+            case -2:
+                //silver
+                return new Color(0xC0, 0xC0, 0xC0);
+            default:
+                //'none'
+                return new Color(0, 0, 0, 0);
+
+        }
     }
 
     public static final int[] e12 = {10, 12, 15, 18, 22, 27, 33, 39, 47, 56, 68, 82,
@@ -145,13 +201,85 @@ public class ResistorColourCodes {
      */
     public static void main(String[] args) {
 //        ResistorColourCodes.getPretty(103456);
-        ResistorColourCodes.getPretty(1000);
+        PrettyValue p = ResistorColourCodes.getPretty(1000);
+
+        BufferedImage img = getImageOfResistor(p.colours, 1000, 500);
+        writeImageToFile(img, "test.png", 2);
+
         for (int i = 0; i < e12.length; i++) {
             System.out.println("e12: " + e12[i] + " =>" + ResistorColourCodes.getPretty(e12[i]).prettyText);
         }
 
     }
 
+    //http://today.java.net/pub/a/today/2007/04/03/perils-of-image-getscaledinstance.html
+    /**
+     * Convenience method that returns a scaled instance of the provided
+     * {@code BufferedImage}.
+     *
+     * @param img the original image to be scaled
+     * @param targetWidth the desired width of the scaled instance, in pixels
+     * @param targetHeight the desired height of the scaled instance, in pixels
+     * @param hint one of the rendering hints that corresponds to
+     * {@code RenderingHints.KEY_INTERPOLATION} (e.g.
+     * {@code RenderingHints.VALUE_INTERPOLATION_NEAREST_NEIGHBOR},
+     * {@code RenderingHints.VALUE_INTERPOLATION_BILINEAR},
+     * {@code RenderingHints.VALUE_INTERPOLATION_BICUBIC})
+     * @param higherQuality if true, this method will use a multi-step scaling
+     * technique that provides higher quality than the usual one-step technique
+     * (only useful in downscaling cases, where {@code targetWidth} or
+     * {@code targetHeight} is smaller than the original dimensions, and
+     * generally only when the {@code BILINEAR} hint is specified)
+     * @return a scaled version of the original {@code BufferedImage}
+     */
+    public static BufferedImage getScaledInstance(BufferedImage img,
+            int targetWidth,
+            int targetHeight,
+            Object hint,
+            boolean higherQuality) {
+        int type = (img.getTransparency() == Transparency.OPAQUE)
+                ? BufferedImage.TYPE_INT_RGB : BufferedImage.TYPE_INT_ARGB;
+        BufferedImage ret = (BufferedImage) img;
+        int w, h;
+        if (higherQuality) {
+            // Use multi-step technique: start with original size, then
+            // scale down in multiple passes with drawImage()
+            // until the target size is reached
+            w = img.getWidth();
+            h = img.getHeight();
+        } else {
+            // Use one-step technique: scale directly from original
+            // size to target size with a single drawImage() call
+            w = targetWidth;
+            h = targetHeight;
+        }
+
+        do {
+            if (higherQuality && w > targetWidth) {
+                w /= 2;
+                if (w < targetWidth) {
+                    w = targetWidth;
+                }
+            }
+
+            if (higherQuality && h > targetHeight) {
+                h /= 2;
+                if (h < targetHeight) {
+                    h = targetHeight;
+                }
+            }
+
+            BufferedImage tmp = new BufferedImage(w, h, type);
+            Graphics2D g2 = tmp.createGraphics();
+            g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, hint);
+            g2.drawImage(ret, 0, 0, w, h, null);
+            g2.dispose();
+
+            ret = tmp;
+        } while (w != targetWidth || h != targetHeight);
+
+        return ret;
+    }
 }
 
 class PrettyValue {
