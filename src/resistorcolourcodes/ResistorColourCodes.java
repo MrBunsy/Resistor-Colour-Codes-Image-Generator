@@ -148,17 +148,29 @@ public class ResistorColourCodes {
         return image;
     }
 
-    public static boolean writeImageToFile(BufferedImage image, String filename, int scaleDown) {
+    /**
+     * write to a file and return the anti aliased image
+     *
+     * @param image
+     * @param filename
+     * @param scaleDown
+     * @return
+     */
+    public static BufferedImage writeImageToFile(BufferedImage image, String filename, int scaleDown) {
         try {
-            BufferedImage scaledImage = getScaledInstance(image, image.getWidth() / scaleDown, image.getHeight() / scaleDown, RenderingHints.VALUE_INTERPOLATION_BICUBIC, true);
-
+            BufferedImage scaledImage;
+            if (scaleDown == 0 || scaleDown == 1) {
+                scaledImage = image;
+            } else {
+                scaledImage = getScaledInstance(image, image.getWidth() / scaleDown, image.getHeight() / scaleDown, RenderingHints.VALUE_INTERPOLATION_BICUBIC, true);
+            }
             ImageIO.write(scaledImage, "png", new File(filename));
+
+            return scaledImage;
         } catch (IOException ex) {
             Logger.getLogger(ResistorColourCodes.class.getName()).log(Level.SEVERE, null, ex);
-            return false;
+            return null;
         }
-
-        return true;
     }
 
     /**
@@ -208,13 +220,13 @@ public class ResistorColourCodes {
         }
     }
 
-//    public static final int[] e12 = {10, 12, 15, 18, 22, 27, 33, 39, 47, 56, 68, 82,
-//        100, 120, 150, 180, 220, 270, 330, 390, 470, 560, 680, 820,
-//        1000, 1200, 1500, 1800, 2200, 2700, 3300, 3900, 4700, 5600, 6800, 8200,
-//        10000, 12000, 15000, 18000, 22000, 27000, 33000, 39000, 47000, 56000, 68000, 82000,
-//        100000, 120000, 150000, 180000, 220000, 270000, 330000, 390000, 470000, 560000, 680000, 820000,
-//        1000000};
-    public static final int[] e12 = {10, 12, 15, 18, 22, 27, 33, 39};
+    public static final int[] e12 = {10, 12, 15, 18, 22, 27, 33, 39, 47, 56, 68, 82,
+        100, 120, 150, 180, 220, 270, 330, 390, 470, 560, 680, 820,
+        1000, 1200, 1500, 1800, 2200, 2700, 3300, 3900, 4700, 5600, 6800, 8200,
+        10000, 12000, 15000, 18000, 22000, 27000, 33000, 39000, 47000, 56000, 68000, 82000,
+        100000, 120000, 150000, 180000, 220000, 270000, 330000, 390000, 470000, 560000, 680000, 820000,
+        1000000};
+//    public static final int[] e12 = {10, 12, 15, 18, 22, 27, 33, 39};
 
     public static final Color GOLD = new Color(0xcf, 0xb5, 0x3b);
 
@@ -247,20 +259,78 @@ public class ResistorColourCodes {
             images[i] = png;
         }
 
+        int labelWidth = 510 * 2;
+        int labelHeight = 110 * 2;
+        
+        boolean printHelp = true;
+
+        BufferedImage combinedImages[] = new BufferedImage[(int) Math.ceil((double)e12.length / 2d)];
         //produce actual drawer labels
         for (int i = 0; i < e12.length; i += 2) {
             if (i < e12.length - 2) {
                 //two together
-                BufferedImage png = combineTwo(prettyValues[i], prettyValues[i + 1], images[i], images[i + 1], 510 * 2 * AA, 110 * 2 * AA);
-                writeImageToFile(png, "drawer_images/" + prettyValues[i].prettyText + "_" + prettyValues[i + 1].prettyText + ".png", AA);
+                BufferedImage png = combineTwo(prettyValues[i], prettyValues[i + 1], images[i], images[i + 1], labelWidth * AA, labelHeight * AA, printHelp);
+
+                combinedImages[i / 2] = writeImageToFile(png, "drawer_images/" + prettyValues[i].prettyText + "_" + prettyValues[i + 1].prettyText + ".png", AA);
             } else {
                 //only one left
+                BufferedImage png = combineOne(prettyValues[i], images[i], labelWidth* AA, labelHeight* AA, printHelp);
+
+                combinedImages[i / 2] = writeImageToFile(png, "drawer_images/" + prettyValues[i].prettyText + ".png", AA);
             }
         }
+        
+        BufferedImage all = combineAllImages(combinedImages, 7, 5);
+        writeImageToFile(all, "drawer_images/all.png", 0);
 
     }
 
-    public static BufferedImage combineTwo(PrettyValue one, PrettyValue two, BufferedImage imageOne, BufferedImage imageTwo, int width, int height) {
+    public static BufferedImage combineOne(PrettyValue p, BufferedImage i, int width, int height, boolean printHelp) {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+//        try {
+        Graphics2D graphics = image.createGraphics();
+
+        double scaledDown = (double) (width / 2) / (double) i.getWidth();
+
+        int resistorHeight = (int) Math.round(i.getHeight() * scaledDown);
+
+        int fontHeight = (int) Math.round((height) * 1.5);
+
+        //new Font("Serif", Font.BOLD, fontHeight)
+        graphics.setFont(getFont(Font.SANS_SERIF, Font.PLAIN, fontHeight, graphics));
+        graphics.setColor(Color.black);
+        FontMetrics f = graphics.getFontMetrics();
+
+        int fontWidth = f.stringWidth(p.prettyText);
+
+        graphics.drawImage(i, 0, (height - resistorHeight) / 2, width / 2, resistorHeight, null);
+        graphics.drawString(p.prettyText, (width / 2), Math.round(height * 0.97));
+
+        if (printHelp) {
+            graphics.drawLine(0, 0, 0, height);
+//            graphics.drawLine(0, 0, width, 0);
+            graphics.drawLine(width - 1, 0, width - 1, height);
+            graphics.drawLine(0, height-1, width, height-1);
+        }
+        
+        graphics.dispose();
+
+        return image;
+    }
+
+    /**
+     *
+     * @param one
+     * @param two
+     * @param imageOne
+     * @param imageTwo
+     * @param width
+     * @param height
+     * @param printHelp if true, then print dots in each corner to make it
+     * easier to cut them up
+     * @return
+     */
+    public static BufferedImage combineTwo(PrettyValue one, PrettyValue two, BufferedImage imageOne, BufferedImage imageTwo, int width, int height, boolean printHelp) {
 
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 //        try {
@@ -270,7 +340,7 @@ public class ResistorColourCodes {
 
         int resistorHeight = (int) Math.round(imageOne.getHeight() * scaledDown);
 
-        int fontHeight = (int) Math.round((height - resistorHeight)*1.5);
+        int fontHeight = (int) Math.round((height - resistorHeight) * 1.5);
 
         //new Font("Serif", Font.BOLD, fontHeight)
         graphics.setFont(getFont(Font.SANS_SERIF, Font.PLAIN, fontHeight, graphics));
@@ -282,15 +352,52 @@ public class ResistorColourCodes {
 //        BufferedImage testOne = ImageIO.read(new File("images/" + one.prettyText + ".png"));
 
         graphics.drawImage(imageOne, 0, 0, width / 2, resistorHeight, null);
-        graphics.drawString(one.prettyText, (width / 2 - fontWidth) / 2, Math.round(height*0.97));
+        graphics.drawString(one.prettyText, (width / 2 - fontWidth) / 2, Math.round(height * 0.97));
 
         graphics.drawImage(imageTwo, width / 2, 0, width / 2, resistorHeight, null);
-        graphics.drawString(two.prettyText, width / 2 + (width / 2 - fontWidth) / 2, Math.round(height*0.97) );
+        graphics.drawString(two.prettyText, width / 2 + (width / 2 - fontWidth) / 2, Math.round(height * 0.97));
 
+        if (printHelp) {
+            graphics.drawLine(0, 0, 0, height);
+//            graphics.drawLine(0, 0, width, 0);
+            graphics.drawLine(width - 1, 0, width - 1, height);
+            graphics.drawLine(0, height-1, width, height-1);
+        }
         graphics.dispose();
 //        } catch (IOException ex) {
 //            Logger.getLogger(ResistorColourCodes.class.getName()).log(Level.SEVERE, null, ex);
 //        }
+        return image;
+
+    }
+
+    /**
+     * assumes all the images are the same size
+     *
+     * @param images
+     * @param rows
+     * @param cols
+     */
+    public static BufferedImage combineAllImages(BufferedImage[] images, int rows, int cols) {
+
+        int singleWidth = images[0].getWidth();
+        int singleHeight = images[0].getHeight();
+        BufferedImage image = new BufferedImage(singleWidth * cols, singleHeight * rows, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D graphics = image.createGraphics();
+
+        int i = 0;
+        for (int r = 0; r < rows; r++) {
+            for (int c = 0; c < cols; c++) {
+                if( i > images.length-1){
+                    break;
+                }
+                graphics.drawImage(images[i],  c * singleWidth,r * singleHeight, null);
+                i++;
+            }
+        }
+
+        graphics.dispose();
+
         return image;
 
     }
