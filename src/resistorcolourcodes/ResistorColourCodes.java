@@ -145,7 +145,7 @@ public class ResistorColourCodes {
 
         //draw outline aroudn resistor body
         graphics.setPaint(Color.black);
-        graphics.draw(resistorBody);
+//        graphics.draw(resistorBody); // think I prefer it without, actually
 
         return image;
     }
