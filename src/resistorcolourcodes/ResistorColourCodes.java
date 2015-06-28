@@ -15,6 +15,7 @@ import java.awt.Shape;
 import java.awt.Stroke;
 import java.awt.Transparency;
 import java.awt.geom.Line2D;
+import java.awt.geom.Rectangle2D;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.File;
@@ -102,10 +103,10 @@ public class ResistorColourCodes {
         //digits left, or zero if less than zero
         colours[2] = valueToColour(Math.max(len - 2, 0));
 
-        return new PrettyValue(value, pretty, new Color[]{});
+        return new PrettyValue(value, pretty, colours);
     }
 
-    public static BufferedImage getImageOfResistor(Color[] colours, int width, int height) {
+    public static BufferedImage getImageOfResistor(Color[] colours, Color tolerance, int width, int height) {
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
 
         Graphics2D graphics = image.createGraphics();
@@ -118,14 +119,32 @@ public class ResistorColourCodes {
 
         graphics.setStroke(new BasicStroke(strokeWidth));
 
+        //lines out of resistor
         graphics.setPaint(Color.black);
         graphics.draw(new Line2D.Double(0, height / 2, width, height / 2));
-        graphics.setPaint(new GradientPaint(0, 0, new Color(250, 150, 100), 0, height, new Color(200, 100, 50)));
+
+        //resistor body
+        graphics.setPaint(new GradientPaint(0, 0, new Color(250, 170, 100), 0, height, new Color(200, 120, 50)));
         Shape resistorBody = new RoundRectangle2D.Double((width - resistorWidth) / 2, (height - resistorHeight) / 2, resistorWidth, resistorHeight, cornerSize, cornerSize);
         graphics.fill(resistorBody);
 
-        graphics.setPaint(Color.black);
+        int colourDistance = (int) Math.round(((double) width) * 0.07);
+        int colourStart = (width - resistorWidth) / 2 + colourDistance;
+        int colourWidth = (int) Math.round(((double) width) * 0.1);
+        
 
+        for (int i = 0; i < colours.length; i++) {
+            graphics.setPaint(colours[i]);
+            graphics.fill(new Rectangle2D.Double(colourStart + colourWidth * i + colourDistance * i, (height - resistorHeight) / 2, colourWidth, resistorHeight));
+        }
+
+        if (tolerance != null) {
+            graphics.setPaint(tolerance);
+            graphics.fill(new Rectangle2D.Double( width - colourStart - colourWidth , (height - resistorHeight) / 2, colourWidth, resistorHeight));
+        }
+
+        //draw outline aroudn resistor body
+        graphics.setPaint(Color.black);
         graphics.draw(resistorBody);
 
         return image;
@@ -178,7 +197,7 @@ public class ResistorColourCodes {
                 return Color.WHITE;
             case -1:
                 //gold
-                return new Color(0xcf, 0xb5, 0x3b);
+                return GOLD;
             case -2:
                 //silver
                 return new Color(0xC0, 0xC0, 0xC0);
@@ -196,6 +215,8 @@ public class ResistorColourCodes {
         100000, 120000, 150000, 180000, 220000, 270000, 330000, 390000, 470000, 560000, 680000, 820000,
         1000000};
 
+    public static final Color GOLD = new Color(0xcf, 0xb5, 0x3b);
+
     /**
      * @param args the command line arguments
      */
@@ -203,7 +224,7 @@ public class ResistorColourCodes {
 //        ResistorColourCodes.getPretty(103456);
         PrettyValue p = ResistorColourCodes.getPretty(1000);
 
-        BufferedImage img = getImageOfResistor(p.colours, 1000, 500);
+        BufferedImage img = getImageOfResistor(p.colours, GOLD, 1000, 500);
         writeImageToFile(img, "test.png", 2);
 
         for (int i = 0; i < e12.length; i++) {
