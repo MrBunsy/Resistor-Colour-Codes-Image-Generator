@@ -1,8 +1,3 @@
-/*
- * To change this license header, choose License Headers in Project Properties.
- * To change this template file, choose Tools | Templates
- * and open the template in the editor.
- */
 package resistorcolourcodes;
 
 import java.awt.BasicStroke;
@@ -180,11 +175,13 @@ public class ResistorColourCodes {
             case 2:
                 return Color.RED;
             case 3:
-                return Color.ORANGE;
+//                return Color.ORANGE;
+                return new Color(255,170,0);
             case 4:
                 return Color.YELLOW;
             case 5:
-                return Color.GREEN;
+//                return Color.GREEN;
+                return new Color(0,180,0);
             case 6:
                 return Color.BLUE;
             case 7:
@@ -223,12 +220,25 @@ public class ResistorColourCodes {
     public static void main(String[] args) {
 //        ResistorColourCodes.getPretty(103456);
         PrettyValue p = ResistorColourCodes.getPretty(1000);
+        
+        int width = 1000;
+        //golden ratio
+//        int height =(int)Math.round(((double)width)/1.61803398875);
+        int height = 300;
+        
+        int AA = 4;
 
-        BufferedImage img = getImageOfResistor(p.colours, GOLD, 1000, 500);
-        writeImageToFile(img, "test.png", 2);
+        BufferedImage img = getImageOfResistor(p.colours, GOLD, width, height);
+        writeImageToFile(img, "example.png", 2);
+        
+        PrettyValue[] prettyValues = new PrettyValue[e12.length];
 
         for (int i = 0; i < e12.length; i++) {
-            System.out.println("e12: " + e12[i] + " =>" + ResistorColourCodes.getPretty(e12[i]).prettyText);
+//            System.out.println("e12: " + e12[i] + " =>" + ResistorColourCodes.getPretty(e12[i]).prettyText);
+            PrettyValue r = ResistorColourCodes.getPretty(e12[i]);
+            BufferedImage png = getImageOfResistor(r.colours, GOLD, width*AA, height*AA);
+            writeImageToFile(png, "images/"+r.prettyText+".png", AA);
+            prettyValues[i] = r;
         }
 
     }
