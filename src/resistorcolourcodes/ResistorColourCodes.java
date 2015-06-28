@@ -2,6 +2,8 @@ package resistorcolourcodes;
 
 import java.awt.BasicStroke;
 import java.awt.Color;
+import java.awt.Font;
+import java.awt.FontMetrics;
 import java.awt.GradientPaint;
 import java.awt.Graphics2D;
 import java.awt.Paint;
@@ -126,7 +128,6 @@ public class ResistorColourCodes {
         int colourDistance = (int) Math.round(((double) width) * 0.07);
         int colourStart = (width - resistorWidth) / 2 + colourDistance;
         int colourWidth = (int) Math.round(((double) width) * 0.1);
-        
 
         for (int i = 0; i < colours.length; i++) {
             graphics.setPaint(colours[i]);
@@ -135,12 +136,14 @@ public class ResistorColourCodes {
 
         if (tolerance != null) {
             graphics.setPaint(tolerance);
-            graphics.fill(new Rectangle2D.Double( width - colourStart - colourWidth , (height - resistorHeight) / 2, colourWidth, resistorHeight));
+            graphics.fill(new Rectangle2D.Double(width - colourStart - colourWidth, (height - resistorHeight) / 2, colourWidth, resistorHeight));
         }
 
         //draw outline aroudn resistor body
         graphics.setPaint(Color.black);
 //        graphics.draw(resistorBody); // think I prefer it without, actually
+
+        graphics.dispose();
 
         return image;
     }
@@ -176,12 +179,12 @@ public class ResistorColourCodes {
                 return Color.RED;
             case 3:
 //                return Color.ORANGE;
-                return new Color(255,170,0);
+                return new Color(255, 170, 0);
             case 4:
                 return Color.YELLOW;
             case 5:
 //                return Color.GREEN;
-                return new Color(0,180,0);
+                return new Color(0, 180, 0);
             case 6:
                 return Color.BLUE;
             case 7:
@@ -220,27 +223,101 @@ public class ResistorColourCodes {
     public static void main(String[] args) {
 //        ResistorColourCodes.getPretty(103456);
         PrettyValue p = ResistorColourCodes.getPretty(1000);
-        
+
         int width = 1000;
         //golden ratio
 //        int height =(int)Math.round(((double)width)/1.61803398875);
         int height = 300;
-        
+
         int AA = 4;
 
         BufferedImage img = getImageOfResistor(p.colours, GOLD, width, height);
         writeImageToFile(img, "example.png", 2);
-        
+
         PrettyValue[] prettyValues = new PrettyValue[e12.length];
+        BufferedImage[] images = new BufferedImage[e12.length];
 
         for (int i = 0; i < e12.length; i++) {
 //            System.out.println("e12: " + e12[i] + " =>" + ResistorColourCodes.getPretty(e12[i]).prettyText);
             PrettyValue r = ResistorColourCodes.getPretty(e12[i]);
-            BufferedImage png = getImageOfResistor(r.colours, GOLD, width*AA, height*AA);
-            writeImageToFile(png, "images/"+r.prettyText+".png", AA);
+            BufferedImage png = getImageOfResistor(r.colours, GOLD, width * AA, height * AA);
+            writeImageToFile(png, "images/" + r.prettyText + ".png", AA);
             prettyValues[i] = r;
+            images[i] = png;
         }
 
+        //produce actual drawer labels
+        for (int i = 0; i < e12.length; i += 2) {
+            if (i < e12.length - 2) {
+                //two together
+                BufferedImage png = combineTwo(prettyValues[i], prettyValues[i + 1], images[i], images[i + 1], 510 * 2 * AA, 310 * 2 * AA);
+                writeImageToFile(png, "drawer_images/" + prettyValues[i].prettyText + "_" + prettyValues[i + 1].prettyText + ".png", AA);
+            } else {
+                //only one left
+            }
+        }
+
+    }
+
+    public static BufferedImage combineTwo(PrettyValue one, PrettyValue two, BufferedImage imageOne, BufferedImage imageTwo, int width, int height) {
+
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        try {
+            Graphics2D graphics = image.createGraphics();
+            
+            double scaledDown = (double)(width/2)/(double)imageOne.getWidth();
+
+            int resistorHeight = (int)Math.round( imageOne.getHeight()*scaledDown);
+
+            int fontHeight = (int) Math.round((height - resistorHeight) * 0.8);
+
+            //new Font("Serif", Font.BOLD, fontHeight)
+//        graphics.setFont(getFont("Serif", Font.PLAIN, fontHeight, graphics));
+//
+//        FontMetrics f = graphics.getFontMetrics();
+//
+//        int fontWidth = f.stringWidth(one.prettyText);
+//        int actualFontHeight = f.getHeight();
+            BufferedImage testOne = ImageIO.read(new File("images/" + one.prettyText + ".png"));
+
+            graphics.drawImage(imageOne, 0, 0, width / 2, resistorHeight, null);
+//        graphics.drawString(one.prettyText, (width / 2 - fontWidth) / 2, (height - resistorHeight) + actualFontHeight);
+
+            graphics.drawImage(imageTwo, width / 2, 0, width / 2, resistorHeight, null);
+//        graphics.drawString(two.prettyText, width / 2 + (width / 2 - fontWidth) / 2, (height - resistorHeight) + actualFontHeight);
+
+            graphics.dispose();
+        } catch (IOException ex) {
+            Logger.getLogger(ResistorColourCodes.class.getName()).log(Level.SEVERE, null, ex);
+        }
+        return image;
+
+    }
+
+    /**
+     * http://stackoverflow.com/questions/5829703/java-getting-a-font-with-a-specific-height-in-pixels
+     *
+     * @param name
+     * @param style
+     * @param height
+     * @return
+     */
+    public static Font getFont(String name, int style, int height, Graphics2D g) {
+        int size = height;
+        Boolean up = null;
+        while (true) {
+            Font font = new Font(name, style, size);
+            int testHeight = g.getFontMetrics(font).getHeight();
+            if (testHeight < height && up != Boolean.FALSE) {
+                size++;
+                up = Boolean.TRUE;
+            } else if (testHeight > height && up != Boolean.TRUE) {
+                size--;
+                up = Boolean.FALSE;
+            } else {
+                return font;
+            }
+        }
     }
 
     //http://today.java.net/pub/a/today/2007/04/03/perils-of-image-getscaledinstance.html
