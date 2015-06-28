@@ -37,7 +37,7 @@ public class ResistorColourCodes {
 
         switch (zeroCount / 3) {
             case 0:
-                return "";
+                return "R";
             case 1:
                 return "k";
             case 2:
@@ -109,7 +109,7 @@ public class ResistorColourCodes {
         Graphics2D graphics = image.createGraphics();
 
         int resistorWidth = (int) Math.round(((double) width) * 0.8);
-        int resistorHeight = (int) Math.round(((double) height) * 0.8);
+        int resistorHeight = (int) Math.round(((double) height) * 1);
 
         int strokeWidth = height / 20;
         int cornerSize = height / 6;
@@ -208,12 +208,13 @@ public class ResistorColourCodes {
         }
     }
 
-    public static final int[] e12 = {10, 12, 15, 18, 22, 27, 33, 39, 47, 56, 68, 82,
-        100, 120, 150, 180, 220, 270, 330, 390, 470, 560, 680, 820,
-        1000, 1200, 1500, 1800, 2200, 2700, 3300, 3900, 4700, 5600, 6800, 8200,
-        10000, 12000, 15000, 18000, 22000, 27000, 33000, 39000, 47000, 56000, 68000, 82000,
-        100000, 120000, 150000, 180000, 220000, 270000, 330000, 390000, 470000, 560000, 680000, 820000,
-        1000000};
+//    public static final int[] e12 = {10, 12, 15, 18, 22, 27, 33, 39, 47, 56, 68, 82,
+//        100, 120, 150, 180, 220, 270, 330, 390, 470, 560, 680, 820,
+//        1000, 1200, 1500, 1800, 2200, 2700, 3300, 3900, 4700, 5600, 6800, 8200,
+//        10000, 12000, 15000, 18000, 22000, 27000, 33000, 39000, 47000, 56000, 68000, 82000,
+//        100000, 120000, 150000, 180000, 220000, 270000, 330000, 390000, 470000, 560000, 680000, 820000,
+//        1000000};
+    public static final int[] e12 = {10, 12, 15, 18, 22, 27, 33, 39};
 
     public static final Color GOLD = new Color(0xcf, 0xb5, 0x3b);
 
@@ -227,7 +228,7 @@ public class ResistorColourCodes {
         int width = 1000;
         //golden ratio
 //        int height =(int)Math.round(((double)width)/1.61803398875);
-        int height = 300;
+        int height = 250;
 
         int AA = 4;
 
@@ -250,7 +251,7 @@ public class ResistorColourCodes {
         for (int i = 0; i < e12.length; i += 2) {
             if (i < e12.length - 2) {
                 //two together
-                BufferedImage png = combineTwo(prettyValues[i], prettyValues[i + 1], images[i], images[i + 1], 510 * 2 * AA, 310 * 2 * AA);
+                BufferedImage png = combineTwo(prettyValues[i], prettyValues[i + 1], images[i], images[i + 1], 510 * 2 * AA, 110 * 2 * AA);
                 writeImageToFile(png, "drawer_images/" + prettyValues[i].prettyText + "_" + prettyValues[i + 1].prettyText + ".png", AA);
             } else {
                 //only one left
@@ -262,34 +263,34 @@ public class ResistorColourCodes {
     public static BufferedImage combineTwo(PrettyValue one, PrettyValue two, BufferedImage imageOne, BufferedImage imageTwo, int width, int height) {
 
         BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
-        try {
-            Graphics2D graphics = image.createGraphics();
-            
-            double scaledDown = (double)(width/2)/(double)imageOne.getWidth();
+//        try {
+        Graphics2D graphics = image.createGraphics();
 
-            int resistorHeight = (int)Math.round( imageOne.getHeight()*scaledDown);
+        double scaledDown = (double) (width / 2) / (double) imageOne.getWidth();
 
-            int fontHeight = (int) Math.round((height - resistorHeight) * 0.8);
+        int resistorHeight = (int) Math.round(imageOne.getHeight() * scaledDown);
 
-            //new Font("Serif", Font.BOLD, fontHeight)
-//        graphics.setFont(getFont("Serif", Font.PLAIN, fontHeight, graphics));
+        int fontHeight = (int) Math.round((height - resistorHeight)*1.5);
+
+        //new Font("Serif", Font.BOLD, fontHeight)
+        graphics.setFont(getFont(Font.SANS_SERIF, Font.PLAIN, fontHeight, graphics));
+        graphics.setColor(Color.black);
+        FontMetrics f = graphics.getFontMetrics();
 //
-//        FontMetrics f = graphics.getFontMetrics();
-//
-//        int fontWidth = f.stringWidth(one.prettyText);
-//        int actualFontHeight = f.getHeight();
-            BufferedImage testOne = ImageIO.read(new File("images/" + one.prettyText + ".png"));
+        int fontWidth = f.stringWidth(one.prettyText);
+        int actualFontHeight = f.getHeight();
+//        BufferedImage testOne = ImageIO.read(new File("images/" + one.prettyText + ".png"));
 
-            graphics.drawImage(imageOne, 0, 0, width / 2, resistorHeight, null);
-//        graphics.drawString(one.prettyText, (width / 2 - fontWidth) / 2, (height - resistorHeight) + actualFontHeight);
+        graphics.drawImage(imageOne, 0, 0, width / 2, resistorHeight, null);
+        graphics.drawString(one.prettyText, (width / 2 - fontWidth) / 2, Math.round(height*0.97));
 
-            graphics.drawImage(imageTwo, width / 2, 0, width / 2, resistorHeight, null);
-//        graphics.drawString(two.prettyText, width / 2 + (width / 2 - fontWidth) / 2, (height - resistorHeight) + actualFontHeight);
+        graphics.drawImage(imageTwo, width / 2, 0, width / 2, resistorHeight, null);
+        graphics.drawString(two.prettyText, width / 2 + (width / 2 - fontWidth) / 2, Math.round(height*0.97) );
 
-            graphics.dispose();
-        } catch (IOException ex) {
-            Logger.getLogger(ResistorColourCodes.class.getName()).log(Level.SEVERE, null, ex);
-        }
+        graphics.dispose();
+//        } catch (IOException ex) {
+//            Logger.getLogger(ResistorColourCodes.class.getName()).log(Level.SEVERE, null, ex);
+//        }
         return image;
 
     }
